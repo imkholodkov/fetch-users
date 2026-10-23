@@ -5,23 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fetch Users</title>
 <style>
-  body { font-family: system-ui, sans-serif; margin: 16px; background: #fafafa; color: #222; }
-  #users { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 16px; }
-  article { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
-  article[data-state="error"] { border-color: #d33; }
-  article[data-state="aborted"] { border-color: #e90; }
-  article h2 { font-size: 1.1em; margin: 0 0 4px; }
-  #summary { display: block; margin-top: 12px; font-weight: 600; }
+  :root { --bg:#f4f5fb; --card:#fff; --text:#1d2033; --muted:#6b7090; --accent:#5b5bd6; --line:#e3e5f0;
+          --ok:#1f9d55; --err:#d64545; --warn:#d98a00; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14151f; --card:#1e2030; --text:#e8e9f3; --muted:#9a9db8; --line:#2c2f45; --accent:#8b8bf5; }
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Inter", system-ui, sans-serif; margin: 0; padding: 32px 16px; background: var(--bg); color: var(--text); }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  #login { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+  #login::before { content: "👤 "; }
+  #cancel { border: 1px solid var(--err); background: transparent; color: var(--err); padding: 8px 16px; border-radius: 999px;
+            font: inherit; font-size: 14px; cursor: pointer; transition: .15s; }
+  #cancel:hover:not(:disabled) { background: var(--err); color: #fff; }
+  #cancel:disabled { border-color: var(--line); color: var(--muted); cursor: default; }
+  #summary { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; font-weight: 600;
+             font-size: 14px; background: var(--card); border: 1px solid var(--line); }
+  #summary::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  #summary[data-state="loading"]::before { animation: pulse 1s infinite alternate; }
+  #summary[data-state="success"]::before { background: var(--ok); }
+  #summary[data-state="partial"]::before, #summary[data-state="aborted"]::before { background: var(--warn); }
+  #summary[data-state="error"]::before { background: var(--err); }
+  @keyframes pulse { to { opacity: .2; } }
+  #users { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 20px; }
+  article { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; min-height: 150px;
+            display: grid; grid-template-columns: 56px 1fr; column-gap: 14px; row-gap: 4px; align-content: start;
+            box-shadow: 0 2px 8px rgba(20,20,60,.06); transition: transform .15s, box-shadow .15s; }
+  article:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20,20,60,.10); }
+  article > :not(.avatar) { grid-column: 2; min-width: 0; }
+  .avatar { grid-row: span 4; width: 56px; height: 56px; border-radius: 50%; background: var(--bg); object-fit: cover; }
+  article h2 { font-size: 17px; margin: 0 0 2px; }
+  .email { color: var(--accent); text-decoration: none; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .email:hover { text-decoration: underline; }
+  .city, .company { font-size: 14px; color: var(--muted); }
+  .city::before { content: "📍 "; }
+  .company::before { content: "🏢 "; }
+  article[data-state="loading"], article[data-state="error"], article[data-state="aborted"] { display: flex; align-items: center; justify-content: center; }
+  article[data-state="loading"] .message { color: var(--muted); }
+  article[data-state="error"] { border-color: var(--err); }
+  article[data-state="error"] .message { color: var(--err); font-weight: 600; }
+  article[data-state="aborted"] { border-color: var(--warn); border-style: dashed; }
+  article[data-state="aborted"] .message { color: var(--warn); font-weight: 600; }
 </style>
 </head>
 <body>
+<div class="wrap">
+<header>
 <h4 id="login">imkholodkov</h4>
-
 <button id="cancel" type="button">Отменить запросы</button>
+</header>
 
 <output id="summary" data-state="loading">Загрузка...</output>
 
 <section id="users"></section>
+</div>
 
 <script>
 const summary = document.getElementById('summary');
@@ -73,6 +111,12 @@ function el(tag, className, text) {
 function fillSuccess(card, user) {
   card.dataset.state = 'success';
   card.replaceChildren();
+  if (user.image) {
+    const avatar = el('img', 'avatar');
+    avatar.src = user.image;
+    avatar.alt = '';
+    card.append(avatar);
+  }
   card.append(el('h2', 'name', `${user.firstName} ${user.lastName}`));
   const email = el('a', 'email', user.email);
   email.href = `mailto:${user.email}`;
